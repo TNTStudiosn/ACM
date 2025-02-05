@@ -57,13 +57,14 @@ public class HornetEntity extends PathAwareEntity implements GeoEntity {
         super.tick();
 
         if (this.hasPassengers() && this.getFirstPassenger() instanceof PlayerEntity player) {
-            // Interpolación suave para la rotación
+            // Actualización constante del Yaw, sin depender del movimiento
             float targetYaw = player.getYaw();
-            smoothYaw += (targetYaw - smoothYaw) * 0.1f; // Suavizado del giro
+            smoothYaw = smoothRotation(smoothYaw, targetYaw, 5.0f); // Suavizado del giro (ajustado)
 
             this.setYaw(smoothYaw);
             this.prevYaw = this.getYaw();
 
+            // Movimiento independiente de la rotación
             float yawRad = (float) Math.toRadians(this.getYaw());
             double forward = player.forwardSpeed * 0.3;
             double sideways = player.sidewaysSpeed * 0.3;
@@ -82,4 +83,12 @@ public class HornetEntity extends PathAwareEntity implements GeoEntity {
             this.move(MovementType.SELF, this.getVelocity());
         }
     }
+
+    // Suavizado del giro con interpolación angular correcta
+    private float smoothRotation(float current, float target, float speed) {
+        float delta = MathHelper.wrapDegrees(target - current);
+        return current + MathHelper.clamp(delta, -speed, speed);
+    }
+
+
 }

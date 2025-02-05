@@ -14,6 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(PlayerEntity.class)
 public class PlayerEntityMixin {
 
+    private double speed = 0.0;
+
     @Inject(method = "tickMovement", at = @At("HEAD"))
     private void controlHornetMovement(CallbackInfo ci) {
         PlayerEntity player = (PlayerEntity) (Object) this;
@@ -22,26 +24,23 @@ public class PlayerEntityMixin {
             double forward = 0.0;
             double sideways = 0.0;
 
-            // Verificamos si el jugador es del cliente para acceder a la entrada
-            if (player instanceof ClientPlayerEntity clientPlayer) {
-                forward = MinecraftClient.getInstance().options.forwardKey.isPressed() ? 1 : 0;
-                sideways = MinecraftClient.getInstance().options.leftKey.isPressed() ? 1 : 0;
-                sideways -= MinecraftClient.getInstance().options.rightKey.isPressed() ? 1 : 0;
+            if (player instanceof ClientPlayerEntity) {
+                MinecraftClient client = MinecraftClient.getInstance();
+                forward = client.options.forwardKey.isPressed() ? 1 : 0;
+                sideways = (client.options.leftKey.isPressed() ? 1 : 0) - (client.options.rightKey.isPressed() ? 1 : 0);
             }
 
-            // Suavizado del giro
-            float targetYaw = player.getYaw();
-            hornet.setYaw(hornet.getYaw() + (targetYaw - hornet.getYaw()) * 0.1f);
+            // Movimiento con aceleración/desaceleración suave
+            double targetSpeed = forward * 0.5;
+            speed += (targetSpeed - speed) * 0.1;
 
-            // Movimiento basado en la dirección de la cámara
-            float yawRad = (float) Math.toRadians(hornet.getYaw());
-            double dx = -MathHelper.sin(yawRad) * forward * 0.3 + MathHelper.cos(yawRad) * sideways * 0.3;
-            double dz = MathHelper.cos(yawRad) * forward * 0.3 + MathHelper.sin(yawRad) * sideways * 0.3;
+            float yawRad = (float) Math.toRadians(player.getYaw());
+            double dx = -MathHelper.sin(yawRad) * speed + MathHelper.cos(yawRad) * sideways * 0.3;
+            double dz = MathHelper.cos(yawRad) * speed + MathHelper.sin(yawRad) * sideways * 0.3;
 
-            // Inercia suave
             Vec3d currentVelocity = hornet.getVelocity();
             Vec3d targetVelocity = new Vec3d(dx, currentVelocity.y, dz);
-            Vec3d smoothedVelocity = currentVelocity.add(targetVelocity.subtract(currentVelocity).multiply(0.1));
+            Vec3d smoothedVelocity = currentVelocity.add(targetVelocity.subtract(currentVelocity).multiply(0.15));
 
             hornet.setVelocity(smoothedVelocity);
         }
