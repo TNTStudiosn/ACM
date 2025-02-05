@@ -6,5 +6,7 @@ public class AcmClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ModEntityRenderer renderer = new ModEntityRenderer();
+        renderer.onInitializeClient();
     }
 }

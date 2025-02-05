@@ -6,5 +6,6 @@ public class Acm implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        ModEntities.registerEntities();
     }
 }
