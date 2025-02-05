@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "acm",
+  "version": "${version}",
+  "name": "ACM",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/acm/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "com.TNTStudios.acm.client.AcmClient"
+    ],
+    "main": [
+      "com.TNTStudios.acm.Acm"
+    ]
+  },
+  "mixins": [
+    "acm.mixins.json",
+    {
+      "config": "acm.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
