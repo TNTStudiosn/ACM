@@ -1,10 +1,16 @@
 package com.TNTStudios.acm.entity;
 
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.MovementType;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.PathAwareEntity;
-import net.minecraft.util.Arm;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
@@ -13,9 +19,12 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class HornetEntity extends PathAwareEntity implements GeoEntity {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private Vec3d previousVelocity = Vec3d.ZERO;
+    private float smoothYaw;
 
     public HornetEntity(EntityType<? extends PathAwareEntity> entityType, World world) {
         super(entityType, world);
+        this.smoothYaw = this.getYaw();
     }
 
     public static DefaultAttributeContainer.Builder createAttributes() {
@@ -31,11 +40,46 @@ public class HornetEntity extends PathAwareEntity implements GeoEntity {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // Registrar controladores de animación aquí si es necesario
+        // Controladores de animación si es necesario
     }
 
     @Override
-    public Arm getMainArm() {
-        return Arm.RIGHT; // O Arm.LEFT según corresponda
+    public ActionResult interactMob(PlayerEntity player, Hand hand) {
+        if (!this.hasPassenger(player)) {
+            player.startRiding(this);
+            return ActionResult.SUCCESS;
+        }
+        return super.interactMob(player, hand);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+
+        if (this.hasPassengers() && this.getFirstPassenger() instanceof PlayerEntity player) {
+            // Interpolación suave para la rotación
+            float targetYaw = player.getYaw();
+            smoothYaw += (targetYaw - smoothYaw) * 0.1f; // Suavizado del giro
+
+            this.setYaw(smoothYaw);
+            this.prevYaw = this.getYaw();
+
+            float yawRad = (float) Math.toRadians(this.getYaw());
+            double forward = player.forwardSpeed * 0.3;
+            double sideways = player.sidewaysSpeed * 0.3;
+
+            double dx = -MathHelper.sin(yawRad) * forward + MathHelper.cos(yawRad) * sideways;
+            double dz = MathHelper.cos(yawRad) * forward + MathHelper.sin(yawRad) * sideways;
+
+            // Suavizado del movimiento (inercia)
+            Vec3d targetVelocity = new Vec3d(dx, 0, dz);
+            previousVelocity = previousVelocity.add(targetVelocity.subtract(previousVelocity).multiply(0.1));
+
+            // Simulación de bamboleo ligero (helicóptero en vuelo)
+            double oscillation = MathHelper.sin(this.age * 0.1f) * 0.02;
+
+            this.setVelocity(previousVelocity.add(0, oscillation, 0));
+            this.move(MovementType.SELF, this.getVelocity());
+        }
     }
 }
